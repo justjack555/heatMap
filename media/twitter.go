@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
+//	"time"
 )
 
 // Custom unsuccessful HTTP request error type
@@ -22,6 +23,20 @@ type BearerError struct {
 type BearerToken struct {
 	Token_type string
 	Access_token string
+}
+
+// Tweet structure
+type Tweet struct {
+//	Created_at time.Time
+	Text string
+//	Geo string
+//	Coordinates string
+	Retweet_count int
+	Favorite_count int
+}
+
+type Tweets struct {
+	Statuses []Tweet
 }
 
 func (httpError HTTPError) Error() string {
@@ -134,6 +149,8 @@ func GetTweets(apiKey string, query string) (string, error) {
 //	fmt.Println("GET_TWEETS: Returning tweets using API KEY ", apiKey, "...")
 	var fullQuery, fullAuth strings.Builder
 	var authErr error
+	var tweets Tweets
+
 	searchClient := &http.Client{}
 
 	// First Authenticate Application
@@ -232,24 +249,14 @@ func GetTweets(apiKey string, query string) (string, error) {
 	fmt.Println("GET_TWEETS: Tweets are: ", string(respBody))
 
 	// JSON decode it
-/*	if jsonErr := json.Unmarshal(respBody, &tweetsPayload); jsonErr != nil {
+	if jsonErr := json.Unmarshal(respBody, &tweets); jsonErr != nil {
 		fmt.Println("GET_TWEETS: Error JSON formatting response body. Exiting.")
 		return "", jsonErr
 	}
-*/
 
-
-	// Do request
-/*	reqMap := map[string]string{
-		"q" : fullQuery.String(),
-		"geocode" : locationPin,
+	for i, tweet := range tweets.Statuses {
+		fmt.Println("GET_TWEETS: ", i, "th tweet is: ", tweet)
 	}
 
-	reqJson, err := json.Marshal(reqMap)
-	if err != nil {
-		fmt.Println("GET_TWEETS: Error encoding map in JSON. Exiting.")
-		return "", err
-	}
-*/
 	return fullQuery.String(), nil
 }
