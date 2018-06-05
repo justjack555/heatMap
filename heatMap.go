@@ -10,13 +10,11 @@ import (
 
 func invokeTwitter() error {
 	var twitterCred strings.Builder
-//	twitterKey := os.Args[1]
-//	twitterSec := os.Args[2]
 	query := os.Args[3]
 
 	// Concatenate key, colon, and secret
 	for i, str := range os.Args[1:3] {
-		fmt.Println("INVOKE_TWITTER: Index value ", i, ", arg value: ", str)
+//		fmt.Println("INVOKE_TWITTER: Index value ", i, ", arg value: ", str)
 		twitterCred.WriteString(str)
 
 		// Append colon after consumer key
@@ -25,7 +23,7 @@ func invokeTwitter() error {
 		}
 	}
 
-	fmt.Println("INVOKE_TWITTER: Final twitter credential: ", twitterCred.String())
+//	fmt.Println("INVOKE_TWITTER: Final twitter credential: ", twitterCred.String())
 
 	// With full credential, send to GetTweets
 	twitterRes, err := media.GetTweets(twitterCred.String(), query)
