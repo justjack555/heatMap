@@ -5,17 +5,19 @@ import (
 	"os"
 	"strings"
 
+	"github.com/justjack555/heatMap/config"
 	"github.com/justjack555/heatMap/media"
 )
+var twitterEnv [2]string
 
 func invokeTwitter() error {
 	var twitterCred strings.Builder
-	query := os.Args[3]
+	query := os.Args[1]
 
 	// Concatenate key, colon, and secret
-	for i, str := range os.Args[1:3] {
-//		fmt.Println("INVOKE_TWITTER: Index value ", i, ", arg value: ", str)
-		twitterCred.WriteString(str)
+	for i, str := range twitterEnv {
+		fmt.Println("INVOKE_TWITTER: Index value ", i, ", arg value: ", str)
+		twitterCred.WriteString(os.Getenv(str))
 
 		// Append colon after consumer key
 		if i == 0 {
@@ -23,7 +25,7 @@ func invokeTwitter() error {
 		}
 	}
 
-//	fmt.Println("INVOKE_TWITTER: Final twitter credential: ", twitterCred.String())
+	fmt.Println("INVOKE_TWITTER: Final twitter credential: ", twitterCred.String())
 
 	// With full credential, send to GetTweets
 	twitterRes, err := media.GetTweets(twitterCred.String(), query)
@@ -38,14 +40,21 @@ func invokeTwitter() error {
 }
 
 func main(){
-	if len(os.Args[1:]) != 3 {
-		fmt.Println("Usage: go run heatMap.go <TWITTER_API_KEY> <TWITTER_SECRET_KEY> <QUERY>")
+	var err error
+	if len(os.Args[1:]) != 1 {
+		fmt.Println("Usage: go run heatMap.go <QUERY>")
+		return
+	}
+
+	// Load application specific environment variables
+	twitterEnv, err = config.LoadEnv()
+	if err != nil {
+		fmt.Println("Error message is: ", err)
 		return
 	}
 
 	// Invoke twitter handler to retrieve tweets
-	err := invokeTwitter()
-
+	err = invokeTwitter()
 	if err != nil {
 		fmt.Println("Error message is: ", err)
 		return
