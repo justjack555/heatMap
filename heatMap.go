@@ -16,7 +16,7 @@ func invokeTwitter() error {
 
 	// Concatenate key, colon, and secret
 	for i, str := range twitterEnv {
-		fmt.Println("INVOKE_TWITTER: Index value ", i, ", arg value: ", str)
+//		fmt.Println("INVOKE_TWITTER: Index value ", i, ", arg value: ", str)
 		twitterCred.WriteString(os.Getenv(str))
 
 		// Append colon after consumer key
@@ -25,7 +25,7 @@ func invokeTwitter() error {
 		}
 	}
 
-	fmt.Println("INVOKE_TWITTER: Final twitter credential: ", twitterCred.String())
+//	fmt.Println("INVOKE_TWITTER: Final twitter credential: ", twitterCred.String())
 
 	// With full credential, send to GetTweets
 	twitterRes, err := media.GetTweets(twitterCred.String(), query)
