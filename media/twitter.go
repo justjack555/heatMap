@@ -25,9 +25,16 @@ type BearerToken struct {
 	Access_token string
 }
 
+type UserType struct {
+	Name string
+	Screen_name string
+	Location string
+}
+
 // Tweet structure
 type Tweet struct {
 //	Created_at time.Time
+	User UserType
 	Text string
 //	Geo string
 //	Coordinates string
