@@ -8,6 +8,12 @@ import (
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
+	"log"
+
+	// Imports the Google Cloud Natural Language API client package.
+	language "cloud.google.com/go/language/apiv1"
+	"golang.org/x/net/context"
+	languagepb "google.golang.org/genproto/googleapis/cloud/language/v1"
 //	"time"
 )
 
@@ -152,7 +158,7 @@ func postCred (apiKey string)(string, error){
 	return tokenPayload.Access_token, nil
 }
 
-func GetTweets(apiKey string, query string) (string, error) {
+func GetTweets(apiKey string, query string) error {
 //	fmt.Println("GET_TWEETS: Returning tweets using API KEY ", apiKey, "...")
 	var fullQuery, fullAuth strings.Builder
 	var authErr error
@@ -167,21 +173,21 @@ func GetTweets(apiKey string, query string) (string, error) {
 
 	if authErr != nil {
 		fmt.Println("GET_TWEETS: Error Receiving bearer token. Exiting")
-		return "", authErr
+		return authErr
 	}
 
 	// Add base url
 	n, err := fullQuery.WriteString(resourceUrl)
 	if err != nil  || n != len(resourceUrl) {
 		fmt.Println("GET_TWEETS: Error writing query to buffer. Exiting.")
-		return "", err
+		return err
 	}
 
 	// Query indicator
 	n, err = fullQuery.WriteString(startQuery)
 	if err != nil  || n != len(startQuery) {
 		fmt.Println("GET_TWEETS: Error writing query to buffer. Exiting.")
-		return "", err
+		return err
 	}
 
 	// Replace spaces
@@ -189,40 +195,35 @@ func GetTweets(apiKey string, query string) (string, error) {
 	n, err = fullQuery.WriteString(query)
 	if err != nil  || n != len(query) {
 		fmt.Println("GET_TWEETS: Error writing query to buffer. Exiting.")
-		return "", err
+		return err
 	}
 
 	// Add location to request
 	n, err = fullQuery.WriteString(locationPin)
 	if err != nil  || n != len(locationPin) {
 		fmt.Println("GET_TWEETS: Error writing query to buffer. Exiting.")
-		return "", err
+		return err
 	}
 
 	// Obtain request object
 	searchReq, reqErr := http.NewRequest("GET", fullQuery.String(), nil)
 	if reqErr != nil {
 		fmt.Println("GET_TWEETS: Error creating custom request. Exiting.")
-		return bearerToken, reqErr
+		return reqErr
 	}
 
 	// Add token to header
 	n, err = fullAuth.WriteString("Bearer ")
 	if err != nil  || n != len("Bearer ") {
 		fmt.Println("GET_TWEETS: Error writing authorization header to buffer. Exiting.")
-		return "", err
+		return err
 	}
 	n, err = fullAuth.WriteString(bearerToken)
 	if err != nil  || n != len(bearerToken) {
 		fmt.Println("GET_TWEETS: Error writing authorization header to buffer. Exiting.")
-		return "", err
+		return err
 	}
-/*	n, err = fullAuth.WriteString(". Signing is not required.")
-	if err != nil  || n != len(". Signing is not required.") {
-		fmt.Println("GET_TWEETS: Error writing authorization header to buffer. Exiting.")
-		return "", err
-	}
-*/
+
 	fmt.Println("GET_TWEETS: Full authorization header is: ", fullAuth.String())
 
 	searchReq.Header.Add("Authorization", fullAuth.String())
@@ -233,13 +234,13 @@ func GetTweets(apiKey string, query string) (string, error) {
 
 	if getErr != nil {
 		fmt.Println("GET_TWEETS: Error with GET for tweets. Exiting.")
-		return "", getErr
+		return getErr
 	}
 
 	// Handle bad response
 	if searchResp.StatusCode != 200 {
 		fmt.Println("GET_TWEETS: Unsuccessful GET. Status is: ", searchResp.Status, ". Exiting.")
-		return "", HTTPError{searchResp.Status}
+		return HTTPError{searchResp.Status}
 	}
 	//	fmt.Println("POST_CRED: Status code of post is: ", resp.Status)
 
@@ -250,20 +251,77 @@ func GetTweets(apiKey string, query string) (string, error) {
 	respBody, respErr := ioutil.ReadAll(searchResp.Body)
 	if respErr != nil {
 		fmt.Println("GET_TWEETS: Error reading response body. Exiting.")
-		return "", respErr
+		return respErr
 	}
 
-	fmt.Println("GET_TWEETS: Tweets are: ", string(respBody))
+//	fmt.Println("GET_TWEETS: Tweets are: ", string(respBody))
 
 	// JSON decode it
 	if jsonErr := json.Unmarshal(respBody, &tweets); jsonErr != nil {
 		fmt.Println("GET_TWEETS: Error JSON formatting response body. Exiting.")
-		return "", jsonErr
+		return jsonErr
 	}
 
-	for i, tweet := range tweets.Statuses {
+	if sentErr := analyzeTweets(&tweets); sentErr != nil {
+		fmt.Println("GET_TWEETS: Error analyzing tweets. Exiting.")
+		return sentErr
+	}
+/*	for i, tweet := range tweets.Statuses {
 		fmt.Println("GET_TWEETS: ", i, "th tweet is: ", tweet)
 	}
+*/
+	return nil
+}
 
-	return fullQuery.String(), nil
+/**
+ * Function to analyze sentiment of each tweet
+ * Accepts a pointer to a Tweets structure, loads
+ * sentiment scores into database
+ * Returns error if one occurs
+ */
+func analyzeTweets(tweets *Tweets) error {
+	// Create Request
+	sentReq := &languagepb.AnalyzeSentimentRequest{
+		Document: &languagepb.Document{
+			Type: languagepb.Document_PLAIN_TEXT,
+			Source: &languagepb.Document_Content{
+//				Content: "",
+			},
+		},
+		EncodingType: languagepb.EncodingType_UTF8,
+	}
+
+	ctx := context.Background()
+
+	// Creates a client.
+	client, err := language.NewClient(ctx)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+
+	// Analyze each tweet
+	for i, tweet := range tweets.Statuses {
+		src, ok := sentReq.Document.Source.(*languagepb.Document_Content)
+		if !ok {
+			log.Fatalf("Failed to perform type assertion on Source. Exiting")
+		}
+
+		src.Content = tweet.Text
+
+		// Detects the sentiment of the text.
+		sentiment, err := client.AnalyzeSentiment(ctx, sentReq)
+		if err != nil {
+			log.Fatalf("Failed to analyze text: %v", err)
+		}
+
+		fmt.Printf("%dth tweet text is: %v\n", i, tweet.Text)
+
+		if sentiment.DocumentSentiment.Score >= 0 {
+			fmt.Println("Sentiment: positive")
+		} else {
+			fmt.Println("Sentiment: negative")
+		}
+	}
+
+	return nil
 }

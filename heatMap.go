@@ -28,13 +28,11 @@ func invokeTwitter() error {
 //	fmt.Println("INVOKE_TWITTER: Final twitter credential: ", twitterCred.String())
 
 	// With full credential, send to GetTweets
-	twitterRes, err := media.GetTweets(twitterCred.String(), query)
+	err := media.GetTweets(twitterCred.String(), query)
 	if err != nil {
 		fmt.Println("Error message is: ", err)
 		return err
 	}
-
-	fmt.Println("Result of Get_Tweets is: ", twitterRes)
 
 	return nil
 }
@@ -48,6 +46,13 @@ func main(){
 
 	// Load application specific environment variables
 	twitterEnv, err = config.LoadEnv()
+	if err != nil {
+		fmt.Println("Error message is: ", err)
+		return
+	}
+
+	// Set Google NLP environment variable
+	err = config.LoadNLEnv()
 	if err != nil {
 		fmt.Println("Error message is: ", err)
 		return

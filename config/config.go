@@ -73,3 +73,32 @@ func LoadEnv() ([2]string, error) {
 
 	return twitterEnvs, nil
 }
+
+/**
+ * Function to load Google cloud NLP credentials
+ * into appropriate environment variable
+ */
+func LoadNLEnv() error {
+	var path strings.Builder
+	const confPath string = "/src/github.com/justjack555/heatMap/config/heatMap-de47d558809d.json"
+
+	// Set up path to credentials file
+	n, err := path.WriteString(os.Getenv("GOPATH"))
+	if err != nil  || n != len(os.Getenv("GOPATH")) {
+		fmt.Println("LOAD_NL_ENV: Error writing path to buffer. Exiting.")
+		return err
+	}
+
+	n, err = path.WriteString(confPath)
+	if err != nil  || n != len(confPath) {
+		fmt.Println("LOAD_NL_ENV: Error writing path to buffer. Exiting.")
+		return err
+	}
+
+	// Simply set ENV to be path to JSON file
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", path.String())
+
+	// TEST
+	fmt.Println("LOAD_NL_ENV: Google app credentials path is: ", os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+	return nil
+}
