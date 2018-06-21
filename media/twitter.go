@@ -52,6 +52,11 @@ type Tweets struct {
 	Statuses []Tweet
 }
 
+// Type to hold data for each location
+type location struct {
+	score float32
+}
+
 func (httpError HTTPError) Error() string {
 	return httpError.status
 }
@@ -280,6 +285,8 @@ func GetTweets(apiKey string, query string) error {
  * Returns error if one occurs
  */
 func analyzeTweets(tweets *Tweets) error {
+	locations := make(map[string]location)
+
 	// Create Request
 	sentReq := &languagepb.AnalyzeSentimentRequest{
 		Document: &languagepb.Document{
@@ -315,13 +322,15 @@ func analyzeTweets(tweets *Tweets) error {
 		}
 
 		fmt.Printf("%dth tweet text is: %v\n", i, tweet.Text)
-
-		if sentiment.DocumentSentiment.Score >= 0 {
-			fmt.Println("Sentiment: positive")
+		prev, ok := locations[tweet.User.Location]
+		prev.score = prev.score + sentiment.DocumentSentiment.Score
+		locations[tweet.User.Location] = prev
+/*		if sentiment.DocumentSentiment.Score >= 0 {
+			fmt.Println("Sentiment: positive with value", sentiment.DocumentSentiment.Score)
 		} else {
-			fmt.Println("Sentiment: negative")
+			fmt.Println("Sentiment: negative with value", sentiment.DocumentSentiment.Score)
 		}
-	}
+*/	}
 
 	return nil
 }
